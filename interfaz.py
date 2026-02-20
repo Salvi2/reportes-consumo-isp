@@ -1,7 +1,6 @@
 """
 Sistema de Reportes de Consumo ISP
 Módulo de Interfaz Gráfica
-Diseño moderno y minimalista
 """
 
 import tkinter as tk
@@ -18,6 +17,8 @@ from calculos import (
     calcular_porcentaje_general
 )
 from generador_excel import generar_reporte
+from historial import guardar_mes, obtener_datos_anio, mes_existe
+from reporte_anual import generar_reporte_anual
 
 
 def obtener_ruta(nombre_archivo):
@@ -32,9 +33,6 @@ class AplicacionSRCT:
 
     def __init__(self):
 
-        # ═══════════════════════════════════════
-        # COLORES
-        # ═══════════════════════════════════════
         self.NARANJA = "#FD8204"
         self.AZUL = "#033087"
         self.BLANCO = "#FFFFFF"
@@ -45,27 +43,20 @@ class AplicacionSRCT:
         self.VERDE_EXITO = "#28A745"
         self.ROJO_ERROR = "#DC3545"
 
-        # ═══════════════════════════════════════
-        # VENTANA PRINCIPAL
-        # ═══════════════════════════════════════
         self.ventana = tk.Tk()
         self.ventana.title("Reportes de Consumo ISP")
-        self.ventana.geometry("520x560")
+        self.ventana.geometry("520x620")
         self.ventana.resizable(False, False)
         self.ventana.configure(bg=self.BLANCO)
 
-        # Tema moderno
         self.estilo = ttk.Style()
         self.estilo.theme_use("clam")
-
-        # Configurar estilos del combobox
         self.estilo.configure(
             "TCombobox",
             fieldbackground=self.BLANCO,
             background=self.BLANCO
         )
 
-        # Icono
         try:
             self.ventana.iconbitmap(obtener_ruta("image.ico"))
         except:
@@ -73,16 +64,10 @@ class AplicacionSRCT:
 
         self.centrar_ventana()
 
-        # ═══════════════════════════════════════
-        # ACENTO SUPERIOR (línea naranja delgada)
-        # ═══════════════════════════════════════
-        tk.Frame(
-            self.ventana, bg=self.NARANJA, height=4
-        ).pack(fill="x")
+        # Acento superior
+        tk.Frame(self.ventana, bg=self.NARANJA, height=4).pack(fill="x")
 
-        # ═══════════════════════════════════════
-        # ENCABEZADO
-        # ═══════════════════════════════════════
+        # Encabezado
         frame_header = tk.Frame(self.ventana, bg=self.BLANCO, pady=20)
         frame_header.pack(fill="x")
 
@@ -102,82 +87,59 @@ class AplicacionSRCT:
             bg=self.BLANCO
         ).pack()
 
-        # Separador
-        tk.Frame(
-            self.ventana, bg=self.GRIS_BORDE, height=1
-        ).pack(fill="x", padx=30)
+        tk.Frame(self.ventana, bg=self.GRIS_BORDE, height=1).pack(fill="x", padx=30)
 
-        # ═══════════════════════════════════════
-        # PERÍODO
-        # ═══════════════════════════════════════
+        # Periodo
         frame_periodo = tk.Frame(self.ventana, bg=self.BLANCO, pady=15)
         frame_periodo.pack(fill="x", padx=30)
 
         tk.Label(
-            frame_periodo,
-            text="Periodo",
+            frame_periodo, text="Periodo",
             font=("Segoe UI", 10, "bold"),
-            fg=self.GRIS_TEXTO,
-            bg=self.BLANCO
+            fg=self.GRIS_TEXTO, bg=self.BLANCO
         ).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 8))
 
-        # Mes
         tk.Label(
-            frame_periodo,
-            text="Mes",
+            frame_periodo, text="Mes",
             font=("Segoe UI", 9),
-            fg=self.GRIS_SECUNDARIO,
-            bg=self.BLANCO
+            fg=self.GRIS_SECUNDARIO, bg=self.BLANCO
         ).grid(row=1, column=0, sticky="w", padx=(0, 8))
 
         mes_actual = datetime.now().month - 1
         self.combo_mes = ttk.Combobox(
-            frame_periodo,
-            values=MESES,
-            state="readonly",
-            width=14,
+            frame_periodo, values=MESES,
+            state="readonly", width=14,
             font=("Segoe UI", 10)
         )
         self.combo_mes.current(mes_actual)
         self.combo_mes.grid(row=1, column=1, padx=(0, 25))
 
-        # Año
         tk.Label(
-            frame_periodo,
-            text="Año",
+            frame_periodo, text="Año",
             font=("Segoe UI", 9),
-            fg=self.GRIS_SECUNDARIO,
-            bg=self.BLANCO
+            fg=self.GRIS_SECUNDARIO, bg=self.BLANCO
         ).grid(row=1, column=2, sticky="w", padx=(0, 8))
 
         anio_actual = str(datetime.now().year)
         self.entry_anio = tk.Entry(
-            frame_periodo,
-            width=7,
+            frame_periodo, width=7,
             font=("Segoe UI", 10),
-            justify="center",
-            relief="solid",
-            bd=1,
-            highlightthickness=0
+            justify="center", relief="solid",
+            bd=1, highlightthickness=0
         )
         self.entry_anio.insert(0, anio_actual)
         self.entry_anio.grid(row=1, column=3)
 
-        # ═══════════════════════════════════════
-        # TABLA DE PROVEEDORES
-        # ═══════════════════════════════════════
+        # Tabla de proveedores
         frame_tabla = tk.Frame(self.ventana, bg=self.BLANCO, pady=10)
         frame_tabla.pack(fill="x", padx=30)
 
         tk.Label(
-            frame_tabla,
-            text="Consumo por proveedor",
+            frame_tabla, text="Consumo por proveedor",
             font=("Segoe UI", 10, "bold"),
-            fg=self.GRIS_TEXTO,
-            bg=self.BLANCO
+            fg=self.GRIS_TEXTO, bg=self.BLANCO
         ).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 8))
 
-        # Encabezados
         headers = [
             ("Proveedor", 0, "w"),
             ("Contratado", 1, ""),
@@ -186,99 +148,76 @@ class AplicacionSRCT:
 
         for texto, col, anchor in headers:
             tk.Label(
-                frame_tabla,
-                text=texto,
+                frame_tabla, text=texto,
                 font=("Segoe UI", 9),
-                fg=self.GRIS_SECUNDARIO,
-                bg=self.BLANCO
+                fg=self.GRIS_SECUNDARIO, bg=self.BLANCO
             ).grid(row=1, column=col, sticky=anchor, padx=(0, 15), pady=(0, 4))
 
-        # Separador bajo encabezados
-        separador_header = tk.Frame(frame_tabla, bg=self.GRIS_BORDE, height=1)
-        separador_header.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 5))
+        tk.Frame(
+            frame_tabla, bg=self.GRIS_BORDE, height=1
+        ).grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 5))
 
-        # Campos
         self.entries_consumo = []
 
         for i in range(len(PROVEEDORES)):
             fila = i + 3
 
-            # Fondo alternado
-            color_fila = self.BLANCO if i % 2 == 0 else self.GRIS_CLARO
-
-            # Nombre
             tk.Label(
-                frame_tabla,
-                text=PROVEEDORES[i],
+                frame_tabla, text=PROVEEDORES[i],
                 font=("Segoe UI", 10),
-                fg=self.GRIS_TEXTO,
-                bg=self.BLANCO
+                fg=self.GRIS_TEXTO, bg=self.BLANCO
             ).grid(row=fila, column=0, sticky="w", pady=4, padx=(0, 15))
 
-            # Contratado
             tk.Label(
-                frame_tabla,
-                text=f"{CONTRATADO[i]:,} Mbps",
+                frame_tabla, text=f"{CONTRATADO[i]:,} Mbps",
                 font=("Segoe UI", 10),
-                fg=self.GRIS_SECUNDARIO,
-                bg=self.BLANCO
+                fg=self.GRIS_SECUNDARIO, bg=self.BLANCO
             ).grid(row=fila, column=1, pady=4, padx=(0, 15))
 
-            # Input
             entry = tk.Entry(
-                frame_tabla,
-                width=14,
+                frame_tabla, width=14,
                 font=("Segoe UI", 10),
-                justify="center",
-                relief="solid",
-                bd=1,
-                highlightcolor=self.NARANJA,
+                justify="center", relief="solid",
+                bd=1, highlightcolor=self.NARANJA,
                 highlightthickness=1
             )
             entry.grid(row=fila, column=2, pady=4)
             self.entries_consumo.append(entry)
-            
-            for i in range(len(self.entries_consumo) - 1):
-                self.entries_consumo[i].bind(
-                    "<Return>",
-                    lambda e, siguiente=i+1: self.entries_consumo[siguiente].focus()
-                )
 
-            # El último campo al dar Enter genera el reporte
-            self.entries_consumo[-1].bind(
+        # Enter para navegar campos
+        for i in range(len(self.entries_consumo) - 1):
+            self.entries_consumo[i].bind(
                 "<Return>",
-                lambda e: self.generar_reporte()
+                lambda e, siguiente=i+1: self.entries_consumo[siguiente].focus()
             )
 
-        # Separador bajo tabla
+        self.entries_consumo[-1].bind(
+            "<Return>",
+            lambda e: self.generar_reporte()
+        )
+
+        # Separador
         tk.Frame(
             self.ventana, bg=self.GRIS_BORDE, height=1
         ).pack(fill="x", padx=30, pady=(5, 0))
 
-        # ═══════════════════════════════════════
-        # BOTONES
-        # ═══════════════════════════════════════
-        frame_botones = tk.Frame(self.ventana, bg=self.BLANCO, pady=20)
+        # Botones
+        frame_botones = tk.Frame(self.ventana, bg=self.BLANCO, pady=15)
         frame_botones.pack(fill="x", padx=30)
 
-        # Botón Generar (naranja)
+        # Boton generar
         self.boton_generar = tk.Button(
-            frame_botones,
-            text="Generar Reporte",
+            frame_botones, text="Generar Reporte",
             font=("Segoe UI", 11, "bold"),
-            bg=self.NARANJA,
-            fg=self.BLANCO,
+            bg=self.NARANJA, fg=self.BLANCO,
             activebackground="#E57303",
             activeforeground=self.BLANCO,
-            cursor="hand2",
-            pady=10,
-            relief="flat",
-            bd=0,
+            cursor="hand2", pady=10,
+            relief="flat", bd=0,
             command=self.generar_reporte
         )
         self.boton_generar.pack(fill="x", pady=(0, 8))
 
-        # Hover generar
         self.boton_generar.bind(
             "<Enter>", lambda e: self.boton_generar.config(bg="#E57303")
         )
@@ -286,24 +225,39 @@ class AplicacionSRCT:
             "<Leave>", lambda e: self.boton_generar.config(bg=self.NARANJA)
         )
 
-        # Botón Limpiar (borde, sin relleno)
-        self.boton_limpiar = tk.Button(
-            frame_botones,
-            text="Limpiar campos",
+        # Boton reporte anual
+        self.boton_anual = tk.Button(
+            frame_botones, text="Reporte Anual",
             font=("Segoe UI", 10),
-            bg=self.BLANCO,
-            fg=self.GRIS_SECUNDARIO,
+            bg=self.AZUL, fg=self.BLANCO,
+            activebackground="#0A4DB3",
+            activeforeground=self.BLANCO,
+            cursor="hand2", pady=6,
+            relief="flat", bd=0,
+            command=self.generar_anual
+        )
+        self.boton_anual.pack(fill="x", pady=(0, 8))
+
+        self.boton_anual.bind(
+            "<Enter>", lambda e: self.boton_anual.config(bg="#0A4DB3")
+        )
+        self.boton_anual.bind(
+            "<Leave>", lambda e: self.boton_anual.config(bg=self.AZUL)
+        )
+
+        # Boton limpiar
+        self.boton_limpiar = tk.Button(
+            frame_botones, text="Limpiar campos",
+            font=("Segoe UI", 10),
+            bg=self.BLANCO, fg=self.GRIS_SECUNDARIO,
             activebackground=self.GRIS_CLARO,
             activeforeground=self.GRIS_TEXTO,
-            cursor="hand2",
-            pady=6,
-            relief="solid",
-            bd=1,
+            cursor="hand2", pady=6,
+            relief="solid", bd=1,
             command=self.limpiar_campos
         )
         self.boton_limpiar.pack(fill="x")
 
-        # Hover limpiar
         self.boton_limpiar.bind(
             "<Enter>", lambda e: self.boton_limpiar.config(
                 bg=self.GRIS_CLARO, fg=self.GRIS_TEXTO
@@ -315,28 +269,23 @@ class AplicacionSRCT:
             )
         )
 
-        # ═══════════════════════════════════════
-        # BARRA DE ESTADO (minimalista)
-        # ═══════════════════════════════════════
+        # Barra de estado
         frame_estado = tk.Frame(self.ventana, bg=self.GRIS_CLARO)
         frame_estado.pack(fill="x", side="bottom")
 
         self.label_estado = tk.Label(
-            frame_estado,
-            text="Listo",
+            frame_estado, text="Listo",
             font=("Segoe UI", 9),
             bg=self.GRIS_CLARO,
             fg=self.GRIS_SECUNDARIO,
-            anchor="w",
-            padx=15,
-            pady=6
+            anchor="w", padx=15, pady=6
         )
         self.label_estado.pack(fill="x")
 
     def centrar_ventana(self):
         self.ventana.update_idletasks()
         ancho = 520
-        alto = 560
+        alto = 620
         x = (self.ventana.winfo_screenwidth() // 2) - (ancho // 2)
         y = (self.ventana.winfo_screenheight() // 2) - (alto // 2)
         self.ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
@@ -346,7 +295,6 @@ class AplicacionSRCT:
         self.label_estado.config(text="Validando...", fg=self.GRIS_SECUNDARIO)
         self.ventana.update()
 
-        # Obtener valores
         valores_texto = []
         for entry in self.entries_consumo:
             valores_texto.append(entry.get())
@@ -364,7 +312,6 @@ class AplicacionSRCT:
             self.label_estado.config(text="Error en los datos", fg=self.ROJO_ERROR)
             return
 
-        # Validar
         exito, mensaje, consumos = validar_datos(valores_texto)
 
         if not exito:
@@ -372,7 +319,6 @@ class AplicacionSRCT:
             self.label_estado.config(text="Error en los datos", fg=self.ROJO_ERROR)
             return
 
-        # Calcular
         self.label_estado.config(text="Generando...", fg=self.GRIS_SECUNDARIO)
         self.ventana.update()
 
@@ -380,13 +326,31 @@ class AplicacionSRCT:
         total_consumo = calcular_total_consumo(consumos)
         porcentaje_general = calcular_porcentaje_general(total_consumo)
 
-        # Generar Excel
         try:
             nombre_archivo = generar_reporte(
                 mes, anio,
                 consumos, porcentajes,
                 total_consumo, porcentaje_general
             )
+
+            # Verificar si el mes ya existe en el historial
+            guardar = True
+
+            if mes_existe(anio, mes):
+                respuesta = messagebox.askyesno(
+                    "Mes existente",
+                    f"Ya existe un reporte de {mes} {anio}.\n"
+                    f"Desea reemplazarlo?"
+                )
+                if not respuesta:
+                    guardar = False
+
+            if guardar:
+                guardar_mes(
+                    anio, mes,
+                    consumos, porcentajes,
+                    total_consumo, porcentaje_general
+                )
 
             ruta_completa = os.path.abspath(nombre_archivo)
 
@@ -402,7 +366,7 @@ class AplicacionSRCT:
                 text=f"Generado: {nombre_archivo}",
                 fg=self.VERDE_EXITO
             )
-            # Abrir el Excel automáticamente
+
             os.startfile(ruta_completa)
 
         except PermissionError:
@@ -412,6 +376,46 @@ class AplicacionSRCT:
                 "Verifique que no este abierto en Excel."
             )
             self.label_estado.config(text="Error al guardar", fg=self.ROJO_ERROR)
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Error inesperado:\n{str(e)}")
+            self.label_estado.config(text="Error inesperado", fg=self.ROJO_ERROR)
+
+    def generar_anual(self):
+
+        anio = self.entry_anio.get()
+
+        if anio.strip() == "" or not anio.isdigit():
+            messagebox.showerror("Error", "Ingrese un año valido.")
+            return
+
+        datos = obtener_datos_anio(anio)
+
+        if datos is None or len(datos) == 0:
+            messagebox.showerror(
+                "Sin datos",
+                f"No hay reportes generados para el año {anio}.\n"
+                f"Genere al menos un reporte mensual primero."
+            )
+            return
+
+        try:
+            nombre = generar_reporte_anual(anio, datos)
+            ruta = os.path.abspath(nombre)
+
+            messagebox.showinfo(
+                "Reporte Anual generado",
+                f"Archivo: {nombre}\n"
+                f"Meses registrados: {len(datos)}\n"
+                f"Ubicacion: {ruta}"
+            )
+
+            self.label_estado.config(
+                text=f"Generado: {nombre}",
+                fg=self.VERDE_EXITO
+            )
+
+            os.startfile(ruta)
 
         except Exception as e:
             messagebox.showerror("Error", f"Error inesperado:\n{str(e)}")
