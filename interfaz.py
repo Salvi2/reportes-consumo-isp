@@ -237,6 +237,18 @@ class AplicacionSRCT:
             )
             entry.grid(row=fila, column=2, pady=4)
             self.entries_consumo.append(entry)
+            
+            for i in range(len(self.entries_consumo) - 1):
+                self.entries_consumo[i].bind(
+                    "<Return>",
+                    lambda e, siguiente=i+1: self.entries_consumo[siguiente].focus()
+                )
+
+            # El último campo al dar Enter genera el reporte
+            self.entries_consumo[-1].bind(
+                "<Return>",
+                lambda e: self.generar_reporte()
+            )
 
         # Separador bajo tabla
         tk.Frame(
