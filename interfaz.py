@@ -2,13 +2,16 @@
 Sistema de Reportes de Consumo ISP
 Módulo de Interfaz Gráfica
 """
-
+from tkinter import ttk, messagebox, simpledialog
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 import os
 import sys
-
+from correo import enviar_correo
+from indicador_pdf import generar_indicador
+from constantes import SMTP_EMAIL, SMTP_PASS
+from constantes import PROVEEDORES, CONTRATADO, MESES, TOTAL_CONTRATADO
 from constantes import PROVEEDORES, CONTRATADO, MESES
 from validaciones import validar_datos
 from calculos import (
@@ -45,7 +48,7 @@ class AplicacionSRCT:
 
         self.ventana = tk.Tk()
         self.ventana.title("Reportes de Consumo ISP")
-        self.ventana.geometry("520x620")
+        self.ventana.geometry("520x720")
         self.ventana.resizable(False, False)
         self.ventana.configure(bg=self.BLANCO)
 
@@ -207,7 +210,7 @@ class AplicacionSRCT:
 
         # Boton generar
         self.boton_generar = tk.Button(
-            frame_botones, text="Generar Reporte",
+            frame_botones, text="generar reporte por proveeedor",
             font=("Segoe UI", 11, "bold"),
             bg=self.NARANJA, fg=self.BLANCO,
             activebackground="#E57303",
@@ -224,7 +227,29 @@ class AplicacionSRCT:
         self.boton_generar.bind(
             "<Leave>", lambda e: self.boton_generar.config(bg=self.NARANJA)
         )
+        # Boton indicador
+        self.boton_indicador = tk.Button(
+            frame_botones, text="Indicador de Ancho de Banda",
+            font=("Segoe UI", 10),
+            bg=self.BLANCO, fg=self.AZUL,
+            activebackground=self.GRIS_CLARO,
+            activeforeground=self.AZUL,
+            cursor="hand2", pady=6,
+            relief="solid", bd=1,
+            command=self.generar_indicador
+        )
+        self.boton_indicador.pack(fill="x", pady=(0, 8))
 
+        self.boton_indicador.bind(
+            "<Enter>", lambda e: self.boton_indicador.config(
+                bg=self.GRIS_CLARO
+            )
+        )
+        self.boton_indicador.bind(
+            "<Leave>", lambda e: self.boton_indicador.config(
+                bg=self.BLANCO
+            )
+        )
         # Boton reporte anual
         self.boton_anual = tk.Button(
             frame_botones, text="Reporte Anual",
@@ -285,10 +310,87 @@ class AplicacionSRCT:
     def centrar_ventana(self):
         self.ventana.update_idletasks()
         ancho = 520
-        alto = 620
+        alto = 720
         x = (self.ventana.winfo_screenwidth() // 2) - (ancho // 2)
         y = (self.ventana.winfo_screenheight() // 2) - (alto // 2)
         self.ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
+    def generar_indicador(self):
+
+        from indicador_pdf import generar_indicador
+        from correo import enviar_correo
+        from constantes import SMTP_EMAIL, SMTP_PASS
+
+        self.label_estado.config(text="Generando indicador...", fg=self.GRIS_SECUNDARIO)
+        self.ventana.update()
+
+        valores_texto = []
+        for entry in self.entries_consumo:
+            valores_texto.append(entry.get())
+
+        mes = self.combo_mes.get()
+        anio = self.entry_anio.get()
+
+        exito, mensaje, consumos = validar_datos(valores_texto)
+
+        if not exito:
+            messagebox.showerror("Error", mensaje)
+            return
+
+        total_consumo = calcular_total_consumo(consumos)
+        porcentaje_general = calcular_porcentaje_general(total_consumo)
+
+        # Generar PDF
+        nombre_pdf = generar_indicador(
+            mes, anio,
+            total_consumo, porcentaje_general
+        )
+
+        ruta_pdf = os.path.abspath(nombre_pdf)
+
+        messagebox.showinfo(
+            "Indicador generado",
+            f"PDF generado correctamente:\n{nombre_pdf}"
+        )
+
+        # Preguntar si desea enviarlo
+        enviar = messagebox.askyesno(
+            "Enviar por correo",
+            "¿Desea enviar el indicador por correo?"
+        )
+
+        if not enviar:
+            os.startfile(ruta_pdf)
+            return
+
+        # Pedir correo destino
+        destinatario = self.ventana_correo()
+        
+
+        if not destinatario:
+            return
+
+        asunto = f"Indicador de Ancho de Banda - {mes} {anio}"
+        mensaje_correo = (
+            f"Adjunto se encuentra el indicador de ancho de banda.\n\n"
+            f"Mes: {mes}\n"
+            f"Año: {anio}\n"
+            f"Consumo total: {total_consumo:,.2f} Mbps\n"
+            f"Uso general: {porcentaje_general}%"
+        )
+
+        enviado, respuesta = enviar_correo(
+            SMTP_EMAIL,
+            SMTP_PASS,
+            destinatario,
+            asunto,
+            mensaje_correo,
+            ruta_pdf
+        )
+
+        if enviado:
+            messagebox.showinfo("Correo enviado", respuesta)
+        else:
+            messagebox.showerror("Error", respuesta)
 
     def generar_reporte(self):
 
@@ -380,7 +482,70 @@ class AplicacionSRCT:
         except Exception as e:
             messagebox.showerror("Error", f"Error inesperado(verifique si no está abierto en excel, cerrar primero):\n{str(e)}")
             self.label_estado.config(text="Error inesperado", fg=self.ROJO_ERROR)
+    def ventana_correo(self):
+        """
+        Ventana moderna para solicitar correo destino.
+        """
 
+        ventana = tk.Toplevel(self.ventana)
+        ventana.title("Enviar Indicador")
+        ventana.geometry("400x200")
+        ventana.resizable(False, False)
+        ventana.configure(bg=self.BLANCO)
+
+        ventana.grab_set()  # Bloquea la principal hasta cerrar
+
+        tk.Label(
+            ventana,
+            text="Enviar Indicador por Correo",
+            font=("Segoe UI", 14, "bold"),
+            fg=self.AZUL,
+            bg=self.BLANCO
+        ).pack(pady=(20,10))
+
+        tk.Label(
+            ventana,
+            text="Correo destino:",
+            font=("Segoe UI", 10),
+            fg=self.GRIS_TEXTO,
+            bg=self.BLANCO
+        ).pack()
+
+        entry_correo = tk.Entry(
+            ventana,
+            font=("Segoe UI", 10),
+            width=35,
+            relief="solid",
+            bd=1
+        )
+        entry_correo.pack(pady=10)
+
+        resultado = {"correo": None}
+
+        def confirmar():
+            correo = entry_correo.get().strip()
+            if correo == "":
+                messagebox.showerror("Error", "Ingrese un correo válido.")
+                return
+            resultado["correo"] = correo
+            ventana.destroy()
+
+        boton = tk.Button(
+            ventana,
+            text="Enviar",
+            font=("Segoe UI", 10, "bold"),
+            bg=self.NARANJA,
+            fg=self.BLANCO,
+            activebackground="#E57303",
+            activeforeground=self.BLANCO,
+            relief="flat",
+            command=confirmar
+        )
+        boton.pack(pady=10)
+
+        ventana.wait_window()
+
+        return resultado["correo"]
     def generar_anual(self):
 
         anio = self.entry_anio.get()
