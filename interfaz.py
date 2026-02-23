@@ -378,7 +378,7 @@ class AplicacionSRCT:
             self.label_estado.config(text="Error al guardar", fg=self.ROJO_ERROR)
 
         except Exception as e:
-            messagebox.showerror("Error", f"Error inesperado:\n{str(e)}")
+            messagebox.showerror("Error", f"Error inesperado(verifique si no está abierto en excel, cerrar primero):\n{str(e)}")
             self.label_estado.config(text="Error inesperado", fg=self.ROJO_ERROR)
 
     def generar_anual(self):
