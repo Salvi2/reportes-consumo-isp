@@ -520,7 +520,13 @@ class AplicacionSRCT:
         )
         entry_correo.pack(pady=10)
 
+        # Poner el cursor automáticamente en el campo
+        entry_correo.focus()
+
         resultado = {"correo": None}
+
+        # ENTER ejecuta la función confirmar()
+        entry_correo.bind("<Return>", lambda e: confirmar())
 
         def confirmar():
             correo = entry_correo.get().strip()

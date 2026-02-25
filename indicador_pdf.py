@@ -185,8 +185,8 @@ def generar_indicador(mes, anio, total_consumo, porcentaje_general):
 
     torta.data = [total_consumo, disponible]
     torta.labels = [
-        f"Consumido{porcentaje_general:.2f}%",
-       f"Contratado:{100 - porcentaje_general:.2f}%"
+        f"Consumido: {porcentaje_general:.2f}%",
+       f"Contratado: {100 - porcentaje_general:.2f}%"
     ]
 
     # Colores de la torta
@@ -222,7 +222,7 @@ def generar_indicador(mes, anio, total_consumo, porcentaje_general):
 
     elementos.append(Paragraph(
         '<font color="#FD8204">■</font> Consumido&nbsp;&nbsp;&nbsp;&nbsp;'
-        '<font color="#033087">■</font> Contratado,
+        '<font color="#033087">■</font> Contratado',
         estilo_leyenda
     ))
 
